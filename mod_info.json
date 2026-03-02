@@ -1,0 +1,13 @@
+{
+  "id": "nexus_ui",
+  "name": "NexusUI",
+  "author": "NexusDev",
+  "version": "0.9.0-beta",
+  "description": "UI framework for Starsector. Features a floating overlay button, tabbed panel system, REST API bridge, themed drawing utilities, and modder SDK.",
+  "gameVersion": "0.98a-RC7",
+  "modPlugin": "com.nexusui.core.NexusModPlugin",
+  "jars": ["jars/NexusUI.jar"],
+  "dependencies": [
+    {"id": "lw_lazylib", "name": "LazyLib"}
+  ]
+}
