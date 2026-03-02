@@ -133,9 +133,11 @@ String result = GameDataBridge.getInstance().pollCommandResult(cmdId);
 
 - [LazyLib](https://fractalsoftworks.com/forum/index.php?topic=5444.0)
 
-## Building from Source
+## Community
 
-Requires JDK 8+ (compiled with `-source 8 -target 8`). Run `build.bat` in the mod root to compile and package.
+I won't be posting this on the Fractal Softworks forums myself for personal reasons, but if you'd like to share it there, you're absolutely free to do so.
+
+If you have suggestions, bug reports, or feature requests, feel free to [open an issue](https://github.com/TheAlanK/NexusUI/issues).
 
 ## License
 
