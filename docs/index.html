@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusUI — Starsector UI Mod Framework</title>
+    <meta name="description" content="NexusUI is an in-game UI overlay framework for Starsector mods. Add interactive panels, dashboards, and tools accessible via a floating button on the campaign screen.">
+    <meta name="keywords" content="Starsector, Starsector mod, Starsector UI, Starsector overlay, Starsector mods, modding, UI framework, NexusUI, game mod">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+        h1 { color: #58a6ff; font-size: 2.5em; margin-bottom: 8px; }
+        h1 span { color: #8b949e; font-weight: 300; }
+        .tagline { color: #8b949e; font-size: 1.2em; margin-bottom: 32px; }
+        .badges { margin-bottom: 32px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85em; font-weight: 500; }
+        .badge-blue { background: #1f3a5f; color: #58a6ff; }
+        .badge-orange { background: #3d2e00; color: #d29922; }
+        .badge-green { background: #0d2818; color: #3fb950; }
+        h2 { color: #f0f6fc; margin: 32px 0 16px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
+        ul { list-style: none; padding: 0; }
+        ul li { padding: 8px 0; border-bottom: 1px solid #161b22; }
+        ul li::before { content: "→ "; color: #58a6ff; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .cta { display: inline-block; margin-top: 24px; padding: 12px 24px; background: #238636; color: #fff; border-radius: 6px; font-weight: 600; font-size: 1.05em; }
+        .cta:hover { background: #2ea043; text-decoration: none; }
+        .mods { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .mod-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; }
+        .mod-card h3 { color: #58a6ff; font-size: 1em; margin-bottom: 4px; }
+        .mod-card p { color: #8b949e; font-size: 0.9em; }
+        footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #21262d; color: #484f58; font-size: 0.85em; }
+        @media (max-width: 600px) { .mods { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nexus<span>UI</span></h1>
+        <p class="tagline">An in-game UI overlay framework for Starsector mods</p>
+
+        <div class="badges">
+            <span class="badge badge-blue">Starsector 0.98a-RC7</span>
+            <span class="badge badge-orange">v0.9.0-beta</span>
+            <span class="badge badge-green">MIT License</span>
+        </div>
+
+        <p>NexusUI adds a floating overlay button to the Starsector campaign screen. Click it to open a tabbed panel where mods can register their own interactive pages — dashboards, cheat panels, colony managers, profilers, and more.</p>
+
+        <a href="https://github.com/TheAlanK/NexusUI/releases/latest" class="cta">Download Latest Release</a>
+
+        <h2>Features</h2>
+        <ul>
+            <li>Floating draggable overlay button on the campaign screen</li>
+            <li>Tabbed panel system with colored mod indicators</li>
+            <li>Simple NexusPage API for mods to register their own panels</li>
+            <li>Thread-safe game command queue for Swing-to-game-thread communication</li>
+            <li>Embedded REST API exposing game data as JSON</li>
+            <li>Themed drawing utilities for consistent Swing panel styling</li>
+        </ul>
+
+        <h2>Mods Built on NexusUI</h2>
+        <div class="mods">
+            <a href="https://github.com/TheAlanK/NexusDashboard" class="mod-card">
+                <h3>NexusDashboard</h3>
+                <p>Fleet composition, combat readiness, faction relations, cargo, and colony overview</p>
+            </a>
+            <a href="https://github.com/TheAlanK/NexusCheats" class="mod-card">
+                <h3>NexusCheats</h3>
+                <p>Add credits, resources, weapons, ships, XP, story points, god mode</p>
+            </a>
+            <a href="https://github.com/TheAlanK/NexusColony" class="mod-card">
+                <h3>NexusColony</h3>
+                <p>Remote colony management — build, upgrade, and manage all colonies</p>
+            </a>
+            <a href="https://github.com/TheAlanK/NexusProfiler" class="mod-card">
+                <h3>NexusProfiler</h3>
+                <p>Real-time FPS, memory, and GC pause tracking</p>
+            </a>
+            <a href="https://github.com/TheAlanK/NexusTactical" class="mod-card">
+                <h3>NexusTactical</h3>
+                <p>Real-time combat fleet status with ship sprites and armor visualization</p>
+            </a>
+        </div>
+
+        <h2>For Modders</h2>
+        <p>Want to build your own NexusUI page? Check the <a href="https://github.com/TheAlanK/NexusUI#for-modders--creating-a-nexusui-page">modding guide</a> for the full API reference and code examples.</p>
+
+        <h2>Community</h2>
+        <p>I won't be posting this on the Fractal Softworks forums myself for personal reasons, but if you'd like to share it there, you're absolutely free to do so.</p>
+        <p style="margin-top: 8px;">Have suggestions or found a bug? <a href="https://github.com/TheAlanK/NexusUI/issues">Open an issue</a>.</p>
+
+        <footer>
+            <p>Made by <a href="https://github.com/TheAlanK">Alan Kocinba</a></p>
+        </footer>
+    </div>
+</body>
+</html>
