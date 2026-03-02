@@ -127,7 +127,7 @@ String result = GameDataBridge.getInstance().pollCommandResult(cmdId);
 - [NexusDashboard](https://github.com/TheAlanK/NexusDashboard) — Fleet composition, combat readiness, faction relations, cargo, and colonies overview
 - [NexusCheats](https://github.com/TheAlanK/NexusCheats) — Add credits, resources, weapons, ships, XP, and story points
 - [NexusProfiler](https://github.com/TheAlanK/NexusProfiler) — Real-time FPS, memory, GC pause tracking, and performance diagnostics
-- [NexusTactical](https://github.com/TheAlanK/NexusTactical) — Real-time combat fleet status with ship sprites and armor damage visualization
+- [NexusTactical](https://github.com/TheAlanK/NexusTactical) — Real-time combat fleet status visualization
 
 ## Dependencies
 
