@@ -1,20 +1,34 @@
 # NexusUI
 
-A **UI framework** for [Starsector](https://fractalsoftworks.com/) mods. NexusUI provides an in-game overlay system where mods can register interactive panels accessible via a floating button on the campaign screen, plus a REST API bridge for external tool integration.
+An **external dashboard and data bridge** for [Starsector](https://fractalsoftworks.com/). NexusUI opens interactive panels **outside** the game window — perfect for multi-monitor setups where you want fleet stats, colony income, faction relations, or cheat tools on a second screen while playing.
+
+It also exposes a localhost REST API, letting external tools (browsers, scripts, companion apps) read live game data and execute commands.
 
 ![Starsector 0.98a-RC7](https://img.shields.io/badge/Starsector-0.98a--RC7-blue)
-![Version 0.9.1-beta](https://img.shields.io/badge/Version-0.9.1--beta-orange)
+![Version 0.9.2-beta](https://img.shields.io/badge/Version-0.9.2--beta-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
+
+## Why NexusUI?
+
+Starsector runs fullscreen on your primary monitor. If you have a second screen, it sits there doing nothing. NexusUI changes that:
+
+- **Drag dashboard windows to your second monitor** — fleet overview, cargo, colonies, faction relations — all live-updating while you play
+- **Open multiple windows** — fleet stats on one screen, cheats panel on another, profiler in a corner
+- **Build companion web apps** — the REST API serves live game data as JSON on `localhost:5959`
+- **Execute game commands from outside** — thread-safe command queue lets external tools add credits, spawn ships, or modify game state
+
+The panels are **independent OS windows** (Swing), not in-game UI. They float freely across all your monitors, resize, and stay open while you play.
 
 ## Features
 
-- **Floating Overlay Button** — Draggable "N" button rendered above all campaign UI with pulsing glow effect
-- **Tabbed Panel System** — Undecorated, draggable Swing windows with color-coded tabs and resize support
-- **Page Registration API** — `NexusPage` interface for mods to add panels; `NexusPageFactory` for multi-window support
-- **Thread-safe Command Queue** — Execute game-state modifications safely from Swing EDT via `GameDataBridge`
-- **REST API Bridge** — Embedded HTTP server (`127.0.0.1:5959`) exposing game data as JSON endpoints with CORS
-- **Themed UI Utilities** — Color palette, fonts, and drawing helpers (`drawCardBg`, `drawCardHeader`, `drawLabeledBar`, `drawRelationBar`) for consistent Swing panel styling
-- **Tripad Extension Integration** — When [Tripad Extension](https://github.com/TheAlanK/TripadExtension) is installed, NexusUI's own overlay button is replaced by Tripad's unified button bar
+- **External Dashboard Windows** — Themed Swing windows with tabbed pages, draggable and resizable, that live outside the game window on any monitor
+- **Multi-Window Support** — Each click opens a new independent window with its own page state; arrange them across monitors however you like
+- **REST API Bridge** — Embedded HTTP server (`127.0.0.1:5959`) exposing fleet, cargo, colonies, and factions as JSON endpoints with CORS
+- **Thread-safe Command Queue** — Safely execute game-state modifications from Swing panels or HTTP requests via `GameDataBridge`
+- **Floating Campaign Button** — Draggable "N" button on the campaign map to quickly open a dashboard window
+- **Page Registration API** — `NexusPage` / `NexusPageFactory` interfaces for mods to add their own dashboard panels
+- **Themed Drawing Utilities** — Color palette, fonts, and helpers (`drawCardBg`, `drawCardHeader`, `drawLabeledBar`, `drawRelationBar`) for consistent panel styling
+- **Tripad Extension Integration** — When [Tripad Extension](https://github.com/TheAlanK/TripadExtension) is installed, the campaign button is managed by Tripad's unified button bar
 
 ## Installation
 
@@ -23,27 +37,35 @@ A **UI framework** for [Starsector](https://fractalsoftworks.com/) mods. NexusUI
 3. Extract to your `Starsector/mods/` directory
 4. Enable **NexusUI** in the Starsector launcher
 
+## Multi-Monitor Usage
+
+1. Load a save in Starsector
+2. Click the floating **N** button on the campaign map (or use a [Tripad Extension](https://github.com/TheAlanK/TripadExtension) button)
+3. A dashboard window appears — **drag it to your second monitor**
+4. Click the N button again to open more windows
+5. Each window updates live every ~3 seconds while you play
+
 ## Architecture
 
 ```
 com.nexusui
 ├── api/
-│   ├── NexusPage           # Interface: mod panels
+│   ├── NexusPage           # Interface: dashboard panels
 │   └── NexusPageFactory    # Interface: per-window page instances
 ├── bridge/
-│   └── GameDataBridge      # Game thread cache + command queue
+│   └── GameDataBridge      # Game thread data cache + command queue
 ├── core/
-│   └── NexusModPlugin      # Mod entry point
+│   └── NexusModPlugin      # Mod entry point, server lifecycle
 ├── overlay/
-│   ├── NexusFrame          # Swing window with tabs + drawing utils
+│   ├── NexusFrame          # External Swing window with tabs + drawing utils
 │   └── NexusOverlay        # Campaign map floating button (OpenGL)
 └── server/
-    └── NexusHttpServer     # Embedded HTTP server
+    └── NexusHttpServer     # Embedded localhost HTTP server
 ```
 
 ## For Modders
 
-### Quick Start — Register a Page
+### Quick Start — Register a Dashboard Page
 
 **1. Add NexusUI as a dependency** in your `mod_info.json`:
 
@@ -91,7 +113,7 @@ public void onGameLoad(boolean newGame) {
 
 ### Multi-Window Support with `NexusPageFactory`
 
-Each `toggle()` call creates a new independent window. Use `NexusPageFactory` so each window gets its own page state:
+Each `toggle()` call creates a new independent window. Use `NexusPageFactory` so each window gets its own page state — essential for multi-monitor setups where users may open several windows:
 
 ```java
 import com.nexusui.api.NexusPageFactory;
@@ -143,7 +165,7 @@ if (Global.getSettings().getModManager().isModEnabled("nexus_ui")) {
 
 ### Thread-safe Game Commands
 
-Execute game-state changes safely from Swing or HTTP threads:
+Execute game-state changes safely from Swing panels or HTTP handlers:
 
 ```java
 import com.nexusui.bridge.GameDataBridge;
@@ -162,7 +184,7 @@ String result = GameDataBridge.getInstance().pollCommandResult(cmdId);
 
 ### Custom Data Providers
 
-Expose mod-specific data via the REST API:
+Expose mod-specific data via the REST API for external tools:
 
 ```java
 GameDataBridge.getInstance().registerProvider("mymod", new GameDataBridge.DataProvider() {
@@ -225,6 +247,33 @@ All endpoints return JSON. CORS is enabled. Server binds to `127.0.0.1:5959` (lo
 | `GET /api/v1/custom/{key}` | Custom data from registered `DataProvider`s |
 
 Data is cached on the game thread and updated every 5 seconds (only when the overlay is visible).
+
+### Example: Fetch Fleet Data from a Browser
+
+```javascript
+fetch('http://127.0.0.1:5959/api/v1/fleet')
+  .then(r => r.json())
+  .then(fleet => {
+    console.log(fleet.totalShips + ' ships, ' + fleet.capitals + ' capitals');
+    fleet.members.forEach(ship => {
+      console.log(ship.shipName + ' — CR: ' + ship.cr + '%');
+    });
+  });
+```
+
+### Example: Build a Companion Web Dashboard
+
+Since the API serves JSON with CORS enabled, you can build a standalone web page that reads live game data:
+
+```html
+<script>
+  setInterval(async () => {
+    const game = await (await fetch('http://127.0.0.1:5959/api/v1/game')).json();
+    document.getElementById('credits').textContent = game.credits.toLocaleString();
+    document.getElementById('date').textContent = game.dateString;
+  }, 5000);
+</script>
+```
 
 ## Constants
 
