@@ -288,6 +288,7 @@ Since the API serves JSON with CORS enabled, you can build a standalone web page
 - [NexusDashboard](https://github.com/TheAlanK/NexusDashboard) — Fleet composition, combat readiness, faction relations, cargo, and colonies overview
 - [NexusCheats](https://github.com/TheAlanK/NexusCheats) — Add credits, resources, weapons, ships, XP, and story points
 - [NexusProfiler](https://github.com/TheAlanK/NexusProfiler) — Real-time FPS, memory, GC pause tracking, and performance diagnostics
+- [NexusColony](https://github.com/TheAlanK/NexusColony) — Remote colony management — build, upgrade, and manage industries across all player colonies
 - [NexusTactical](https://github.com/TheAlanK/NexusTactical) — Real-time combat fleet status visualization
 - [TripadExtension](https://github.com/TheAlanK/TripadExtension) — Modular floating button framework for the campaign map
 

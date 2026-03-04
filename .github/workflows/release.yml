@@ -14,8 +14,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for code changes
+        id: changes
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | head -n 2 | tail -n 1)
+          if [ -z "$PREV_TAG" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "First release — no previous tag to compare"
+          else
+            CODE_CHANGES=$(git diff --name-only "$PREV_TAG"..HEAD -- . ':!*.md' ':!.github/ISSUE_TEMPLATE/*' ':!.github/pull_request_template.md' ':!CODE_OF_CONDUCT.md' ':!CONTRIBUTING.md' ':!SECURITY.md' ':!LICENSE' | wc -l)
+            if [ "$CODE_CHANGES" -eq 0 ]; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "Only documentation changes since $PREV_TAG — skipping release"
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+              echo "$CODE_CHANGES code file(s) changed since $PREV_TAG"
+            fi
+          fi
+
+      - name: Delete docs-only tag
+        if: steps.changes.outputs.skip == 'true'
+        run: |
+          echo "::warning::Skipping release — only documentation files changed. Deleting tag."
+          git push --delete origin ${GITHUB_REF#refs/tags/} || true
 
       - name: Extract mod info
+        if: steps.changes.outputs.skip != 'true'
         id: mod
         run: |
           MOD_NAME=$(python3 -c "import json; print(json.load(open('mod_info.json'))['name'])")
@@ -25,6 +52,7 @@ jobs:
           echo "Building ${MOD_NAME} ${VERSION}"
 
       - name: Build release zip
+        if: steps.changes.outputs.skip != 'true'
         run: |
           MOD_NAME="${{ steps.mod.outputs.name }}"
           VERSION="${{ steps.mod.outputs.version }}"
@@ -41,6 +69,7 @@ jobs:
           ls -la *.zip
 
       - name: Create GitHub Release
+        if: steps.changes.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           name: "${{ steps.mod.outputs.name }} ${{ steps.mod.outputs.version }}"
