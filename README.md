@@ -73,6 +73,44 @@ public class MyModPlugin extends BaseModPlugin {
 }
 ```
 
+### Optional Integration (NexusUI Not Required)
+
+If your mod should work **with or without** NexusUI installed, do **not** add `nexus_ui` to your `mod_info.json` dependencies. Instead, use lazy class loading:
+
+> **⚠ Starsector's Security Sandbox** blocks Java reflection from mod code. Calls to `Class.forName()`, `getMethod()`, or `invoke()` will throw a `SecurityException` at runtime. Use the `isModEnabled()` pattern shown below instead.
+
+**1. Create a helper class** that imports NexusUI types (only loaded when NexusUI is present):
+
+```java
+import com.nexusui.api.NexusPage;
+import com.nexusui.api.NexusPageFactory;
+import com.nexusui.overlay.NexusFrame;
+
+public class MyNexusIntegration {
+    public static void register() {
+        NexusFrame.registerPageFactory(new NexusPageFactory() {
+            public String getId()    { return "my_page"; }
+            public String getTitle() { return "My Mod"; }
+            public NexusPage create() { return new MyPage(); }
+        });
+    }
+}
+```
+
+**2. Guard the call** in your ModPlugin using `isModEnabled()`:
+
+```java
+if (Global.getSettings().getModManager().isModEnabled("nexus_ui")) {
+    try {
+        MyNexusIntegration.register();
+    } catch (Throwable e) {
+        log.warn("NexusUI integration failed: " + e.getMessage());
+    }
+}
+```
+
+Java loads classes lazily — `MyNexusIntegration` is only resolved when the `if` block executes, so your mod won't crash when NexusUI is absent.
+
 ### 4. Execute Game Commands (Thread-safe)
 
 ```java

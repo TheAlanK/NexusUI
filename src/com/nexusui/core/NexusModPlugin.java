@@ -42,9 +42,13 @@ public class NexusModPlugin extends BaseModPlugin {
         bridge.registerApiHandlers(server);
         Global.getSector().addTransientScript(bridge);
 
-        // Register overlay button
-        NexusOverlay overlay = new NexusOverlay(port);
-        Global.getSector().getListenerManager().addListener(overlay, true);
+        // Register overlay button (skip if Tripad Extension handles it)
+        if (Global.getSettings().getModManager().isModEnabled("tripad_extension")) {
+            log.info("NexusUI: Tripad Extension detected, skipping own overlay button");
+        } else {
+            NexusOverlay overlay = new NexusOverlay(port);
+            Global.getSector().getListenerManager().addListener(overlay, true);
+        }
 
         log.info("NexusUI: Server on port " + port);
     }
