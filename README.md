@@ -1,42 +1,61 @@
 # NexusUI
 
-A **UI framework** for [Starsector](https://fractalsoftworks.com/) mods. NexusUI provides an in-game overlay system where mods can register interactive panels accessible via a floating button on the campaign screen.
+A **UI framework** for [Starsector](https://fractalsoftworks.com/) mods. NexusUI provides an in-game overlay system where mods can register interactive panels accessible via a floating button on the campaign screen, plus a REST API bridge for external tool integration.
 
 ![Starsector 0.98a-RC7](https://img.shields.io/badge/Starsector-0.98a--RC7-blue)
-![Version 0.9.0-beta](https://img.shields.io/badge/Version-0.9.0--beta-orange)
+![Version 0.9.1-beta](https://img.shields.io/badge/Version-0.9.1--beta-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 ## Features
 
-- **Floating Overlay Button** — Draggable "N" button rendered above all campaign UI
-- **Tabbed Panel System** — Browser-style tab bar with colored mod indicators, hover effects, and rounded tabs
-- **Page Registration API** — Simple `NexusPage` interface for mods to add their own panels
-- **Thread-safe Command Queue** — Safely modify game state from Swing EDT via `GameDataBridge`
-- **REST API Bridge** — Embedded HTTP server (port 5959) exposing game data as JSON endpoints
-- **Themed UI Utilities** — Pre-built color palette, fonts, and drawing helpers for consistent Swing panel styling
+- **Floating Overlay Button** — Draggable "N" button rendered above all campaign UI with pulsing glow effect
+- **Tabbed Panel System** — Undecorated, draggable Swing windows with color-coded tabs and resize support
+- **Page Registration API** — `NexusPage` interface for mods to add panels; `NexusPageFactory` for multi-window support
+- **Thread-safe Command Queue** — Execute game-state modifications safely from Swing EDT via `GameDataBridge`
+- **REST API Bridge** — Embedded HTTP server (`127.0.0.1:5959`) exposing game data as JSON endpoints with CORS
+- **Themed UI Utilities** — Color palette, fonts, and drawing helpers (`drawCardBg`, `drawCardHeader`, `drawLabeledBar`, `drawRelationBar`) for consistent Swing panel styling
+- **Tripad Extension Integration** — When [Tripad Extension](https://github.com/TheAlanK/TripadExtension) is installed, NexusUI's own overlay button is replaced by Tripad's unified button bar
 
 ## Installation
 
 1. Install [LazyLib](https://fractalsoftworks.com/forum/index.php?topic=5444.0) if you haven't already
-2. Download the latest release or clone this repository
-3. Copy the `NexusUI` folder into your `Starsector/mods/` directory
+2. Download the [latest release](https://github.com/TheAlanK/NexusUI/releases)
+3. Extract to your `Starsector/mods/` directory
 4. Enable **NexusUI** in the Starsector launcher
 
-## For Modders — Creating a NexusUI Page
+## Architecture
 
-### 1. Add NexusUI as a dependency
+```
+com.nexusui
+├── api/
+│   ├── NexusPage           # Interface: mod panels
+│   └── NexusPageFactory    # Interface: per-window page instances
+├── bridge/
+│   └── GameDataBridge      # Game thread cache + command queue
+├── core/
+│   └── NexusModPlugin      # Mod entry point
+├── overlay/
+│   ├── NexusFrame          # Swing window with tabs + drawing utils
+│   └── NexusOverlay        # Campaign map floating button (OpenGL)
+└── server/
+    └── NexusHttpServer     # Embedded HTTP server
+```
 
-In your `mod_info.json`:
+## For Modders
+
+### Quick Start — Register a Page
+
+**1. Add NexusUI as a dependency** in your `mod_info.json`:
+
 ```json
 {
   "dependencies": [
-    {"id": "lw_lazylib", "name": "LazyLib"},
     {"id": "nexus_ui", "name": "NexusUI"}
   ]
 }
 ```
 
-### 2. Implement `NexusPage`
+**2. Implement `NexusPage`:**
 
 ```java
 import com.nexusui.api.NexusPage;
@@ -48,38 +67,51 @@ public class MyPage implements NexusPage {
 
     public JPanel createPanel(int port) {
         JPanel panel = new JPanel();
-        // Build your UI here
-        // Use NexusFrame utility methods for consistent theming
+        // Build your Swing UI here
+        // 'port' is the HTTP server port (5959) for REST calls
         return panel;
     }
 
     public void refresh() {
-        // Called periodically to update data (optional)
+        // Called every ~3 seconds to update data
     }
 }
 ```
 
-### 3. Register in your ModPlugin
+**3. Register in your ModPlugin:**
 
 ```java
-import com.fs.starfarer.api.BaseModPlugin;
 import com.nexusui.overlay.NexusFrame;
 
-public class MyModPlugin extends BaseModPlugin {
-    @Override
-    public void onGameLoad(boolean newGame) {
-        NexusFrame.registerPage(new MyPage());
-    }
+@Override
+public void onGameLoad(boolean newGame) {
+    NexusFrame.registerPage(new MyPage());
 }
+```
+
+### Multi-Window Support with `NexusPageFactory`
+
+Each `toggle()` call creates a new independent window. Use `NexusPageFactory` so each window gets its own page state:
+
+```java
+import com.nexusui.api.NexusPageFactory;
+import com.nexusui.api.NexusPage;
+import com.nexusui.overlay.NexusFrame;
+
+NexusFrame.registerPageFactory(new NexusPageFactory() {
+    public String getId()    { return "my_page"; }
+    public String getTitle() { return "My Mod"; }
+    public NexusPage create() { return new MyPage(); }
+});
 ```
 
 ### Optional Integration (NexusUI Not Required)
 
-If your mod should work **with or without** NexusUI installed, do **not** add `nexus_ui` to your `mod_info.json` dependencies. Instead, use lazy class loading:
+If your mod should work **with or without** NexusUI installed, do NOT add it to `dependencies`. Use lazy class loading instead:
 
-> **⚠ Starsector's Security Sandbox** blocks Java reflection from mod code. Calls to `Class.forName()`, `getMethod()`, or `invoke()` will throw a `SecurityException` at runtime. Use the `isModEnabled()` pattern shown below instead.
+> **Starsector's security sandbox** blocks reflection (`Class.forName`, `getMethod`, `invoke` all throw `SecurityException`). Use the `isModEnabled()` guard below — Java loads classes lazily, so `MyNexusIntegration` won't resolve unless the `if` block executes.
 
-**1. Create a helper class** that imports NexusUI types (only loaded when NexusUI is present):
+**1. Create a helper class** that imports NexusUI types:
 
 ```java
 import com.nexusui.api.NexusPage;
@@ -97,7 +129,7 @@ public class MyNexusIntegration {
 }
 ```
 
-**2. Guard the call** in your ModPlugin using `isModEnabled()`:
+**2. Guard the call** in your ModPlugin:
 
 ```java
 if (Global.getSettings().getModManager().isModEnabled("nexus_ui")) {
@@ -109,56 +141,98 @@ if (Global.getSettings().getModManager().isModEnabled("nexus_ui")) {
 }
 ```
 
-Java loads classes lazily — `MyNexusIntegration` is only resolved when the `if` block executes, so your mod won't crash when NexusUI is absent.
+### Thread-safe Game Commands
 
-### 4. Execute Game Commands (Thread-safe)
+Execute game-state changes safely from Swing or HTTP threads:
 
 ```java
 import com.nexusui.bridge.GameDataBridge;
 
-// From Swing EDT, enqueue a command that runs on the game thread
-String cmdId = GameDataBridge.getInstance().enqueueCommand(() -> {
-    // This runs on the game thread — safe to call game APIs
-    Global.getSector().getPlayerFleet().getCargo().getCredits().add(1000);
-    return "{\"success\":true,\"message\":\"Added 1000 credits\"}";
+String cmdId = GameDataBridge.getInstance().enqueueCommand(new GameDataBridge.GameCommand() {
+    public String execute() {
+        // Runs on the game thread — safe to use all game APIs
+        Global.getSector().getPlayerFleet().getCargo().getCredits().add(1000);
+        return "{\"success\":true}";
+    }
 });
 
-// Poll for result (e.g., on a Swing Timer)
+// Poll for result (non-blocking, returns null if not ready)
 String result = GameDataBridge.getInstance().pollCommandResult(cmdId);
 ```
 
-## REST API Endpoints
+### Custom Data Providers
+
+Expose mod-specific data via the REST API:
+
+```java
+GameDataBridge.getInstance().registerProvider("mymod", new GameDataBridge.DataProvider() {
+    public String getData() {
+        return "{\"status\":\"active\",\"count\":42}";
+    }
+});
+// Accessible at: GET http://127.0.0.1:5959/api/v1/custom/mymod
+```
+
+### Drawing Utilities
+
+`NexusFrame` provides static helpers for building themed Swing panels:
+
+| Method | Description |
+|--------|-------------|
+| `drawCardBg(g2, x, y, w, h)` | Rounded card background with border (8px radius) |
+| `drawCardHeader(g2, x, y, w, title, badge)` | Gradient header with title and optional badge |
+| `drawLabeledBar(g2, x, y, w, h, label, value, pct, color)` | Progress bar (0.0–1.0 scale) |
+| `drawRelationBar(g2, x, y, w, h, name, relation, color)` | Centered relation bar (-100 to +100) |
+| `formatNumber(long)` | Format with K/M suffixes: `1234` → `"1.2K"` |
+| `prettifyId(String)` | `"heavy_machinery"` → `"Heavy machinery"` |
+| `truncate(String, int)` | Truncate with ellipsis |
+
+### Theme Colors
+
+| Constant | RGB | Usage |
+|----------|-----|-------|
+| `BG_PRIMARY` | `(10, 14, 23)` | Main background |
+| `BG_SECONDARY` | `(17, 24, 39)` | Title bar, secondary panels |
+| `BG_CARD` | `(21, 29, 46)` | Card backgrounds |
+| `CYAN` | `(100, 220, 255)` | Primary accent |
+| `GREEN` | `(100, 255, 100)` | Positive values |
+| `ORANGE` | `(255, 180, 50)` | Warnings |
+| `RED` | `(255, 80, 80)` | Negative values |
+| `TEXT_PRIMARY` | `(220, 225, 232)` | Main text |
+| `TEXT_SECONDARY` | `(138, 149, 168)` | Secondary text |
+
+### Fonts
+
+| Constant | Font | Usage |
+|----------|------|-------|
+| `FONT_TITLE` | Consolas Bold 14 | Page titles |
+| `FONT_HEADER` | Consolas Bold 12 | Section headers |
+| `FONT_BODY` | Segoe UI 12 | Body text |
+| `FONT_MONO` | Consolas 11 | Monospace data |
+| `FONT_SMALL` | Consolas 10 | Small labels |
+
+## REST API
+
+All endpoints return JSON. CORS is enabled. Server binds to `127.0.0.1:5959` (localhost only).
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/v1/game` | Game metadata (date, player name, level) |
-| `GET /api/v1/fleet` | Player fleet composition and CR |
-| `GET /api/v1/cargo` | Cargo manifest |
-| `GET /api/v1/colonies` | Player colony data |
-| `GET /api/v1/factions` | Faction relations |
-| `GET /api/v1/custom/{key}` | Custom data from registered providers |
+| `GET /api/v1/game` | Player name, faction, credits, date, total ships |
+| `GET /api/v1/fleet` | Fleet composition, ship details, CR, strength |
+| `GET /api/v1/cargo` | Credits, cargo space, fuel, supplies, crew, commodities |
+| `GET /api/v1/colonies` | Player colonies, industries, income, stability |
+| `GET /api/v1/factions` | All factions with relation values and rep levels |
+| `GET /api/v1/custom/{key}` | Custom data from registered `DataProvider`s |
 
-## Utility Methods
+Data is cached on the game thread and updated every 5 seconds (only when the overlay is visible).
 
-`NexusFrame` provides static helpers for building themed panels:
+## Constants
 
-- `drawCardBg(Graphics2D, x, y, w, h)` — Draw a styled card background
-- `drawCardHeader(Graphics2D, title, x, y, w)` — Draw a card header with title
-- `drawLabeledBar(Graphics2D, label, value, max, x, y, w, color)` — Draw a labeled progress bar
-- `drawRelationBar(Graphics2D, label, value, x, y, w)` — Draw a relation bar (-100 to +100)
-- `formatNumber(long)` — Format numbers with K/M suffixes
-- `prettifyId(String)` — Convert snake_case IDs to Title Case
-## Theme Colors
-
-| Constant | Hex | Usage |
-|----------|-----|-------|
-| `BG_PRIMARY` | `#0D1117` | Main background |
-| `BG_SECONDARY` | `#161B22` | Secondary panels |
-| `BG_CARD` | `#1C2333` | Card backgrounds |
-| `CYAN` | `#58A6FF` | Accent, links |
-| `GREEN` | `#3FB950` | Positive values |
-| `ORANGE` | `#D29922` | Warnings |
-| `RED` | `#F85149` | Negative values |
+| Constant | Value | Location |
+|----------|-------|----------|
+| `NexusModPlugin.MOD_ID` | `"nexus_ui"` | Mod identifier |
+| `NexusModPlugin.DEFAULT_PORT` | `5959` | HTTP server port |
+| `NexusModPlugin.VERSION` | `"0.9.0-beta"` | Current version |
 
 ## Mods Built on NexusUI
 
@@ -166,6 +240,7 @@ String result = GameDataBridge.getInstance().pollCommandResult(cmdId);
 - [NexusCheats](https://github.com/TheAlanK/NexusCheats) — Add credits, resources, weapons, ships, XP, and story points
 - [NexusProfiler](https://github.com/TheAlanK/NexusProfiler) — Real-time FPS, memory, GC pause tracking, and performance diagnostics
 - [NexusTactical](https://github.com/TheAlanK/NexusTactical) — Real-time combat fleet status visualization
+- [TripadExtension](https://github.com/TheAlanK/TripadExtension) — Modular floating button framework for the campaign map
 
 ## Dependencies
 
